@@ -79,6 +79,8 @@
 #define INPAGE_CALL_NAME                "window.callPhantom"
 #define CALLBACKS_OBJECT_INJECTION      INPAGE_CALL_NAME" = function() { return window."CALLBACKS_OBJECT_NAME".call.call(_phantom, Array.prototype.slice.call(arguments, 0)); };"
 #define CALLBACKS_OBJECT_PRESENT        "typeof(window."CALLBACKS_OBJECT_NAME") !== \"undefined\";"
+#define PHANTOMJS_PDF_DPI 72            // Different defaults. OSX: 72, X11: 75(?), Windows: 96
+
 
 #define STDOUT_FILENAME "/dev/stdout"
 #define STDERR_FILENAME "/dev/stderr"
@@ -352,6 +354,7 @@ private:
 
 WebPage::WebPage(QObject* parent, const QUrl& baseUrl)
     : QObject(parent)
+    , m_dpi(PHANTOMJS_PDF_DPI)
     , m_navigationLocked(false)
     , m_mousePos(QPoint(0, 0))
     , m_ownsPages(true)
@@ -441,6 +444,16 @@ WebPage::WebPage(QObject* parent, const QUrl& baseUrl)
 WebPage::~WebPage()
 {
     emit closing(this);
+}
+
+void WebPage::setDpi(const int dpi)
+{
+    m_dpi = dpi;
+}
+
+int WebPage::dpi() const
+{
+    return m_dpi;
 }
 
 QWebFrame* WebPage::mainFrame()
@@ -1124,8 +1137,6 @@ QImage WebPage::renderImage()
     return buffer;
 }
 
-#define PHANTOMJS_PDF_DPI 72            // Different defaults. OSX: 72, X11: 75(?), Windows: 96
-
 qreal stringToPointSize(const QString& string)
 {
     static const struct {
@@ -1163,7 +1174,7 @@ bool WebPage::renderPdf(const QString& fileName)
     QPrinter printer;
     printer.setOutputFormat(QPrinter::PdfFormat);
     printer.setOutputFileName(fileName);
-    printer.setResolution(PHANTOMJS_PDF_DPI);
+    printer.setResolution(m_dpi);
     QVariantMap paperSize = m_paperSize;
 
     if (paperSize.isEmpty()) {
